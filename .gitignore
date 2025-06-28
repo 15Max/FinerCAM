@@ -7,7 +7,7 @@
 # Ignore the data directory (too heavy)ù
 
 data/*
-
+models/checkpoints/*
 
 # Ignore .csv .pkl and Zone.Identifier files
 *.pkl 
