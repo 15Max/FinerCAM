@@ -3,16 +3,16 @@ import torch
 from torch.utils.data import DataLoader, Subset 
 from torchvision import transforms, datasets  
 from sklearn.model_selection import train_test_split  
-
+import numpy as np
 
 
 def get_dataloaders(data_dir: str,
-                    train_ratio: float = 0.8,
+                    train_ratio: float = 0.7,
                     val_ratio: float = 0.1,
                     batch_size: int = 32,
                     num_workers: int = 4,
                     input_size: int = 224,  
-                    seed = None):
+                    seed: int = None):
     """
     Create stratified dataloaders for training, validation, and testing
     from an image-folder dataset.
@@ -35,6 +35,7 @@ def get_dataloaders(data_dir: str,
     # Get the seed
     if seed is not None:
         torch.manual_seed(seed)
+        np.random.seed(seed)
 
     # Define image transforms
     # common_transforms: applied to all sets (resize, tensor, normalize)
@@ -43,8 +44,8 @@ def get_dataloaders(data_dir: str,
     common_transforms = transforms.Compose([
         transforms.Resize((input_size, input_size)),   # fixed spatial size
         transforms.ToTensor(),                         # HxWxC [0,255] -> CxHxW [0.0,1.0]
-        transforms.Normalize([0.485, 0.456, 0.406],    # ImageNet mean
-                             [0.229, 0.224, 0.225])    # ImageNet std
+        transforms.Normalize([0.485, 0.456, 0.406],    # ImageNet mean (IMAGENET1K_V2)
+                             [0.229, 0.224, 0.225])    # ImageNet std  (IMAGENET1K_V2)
     ])
     
     # Some augmentation for training data to act as a regularizer
@@ -79,14 +80,15 @@ def get_dataloaders(data_dir: str,
         indices, labels,
         train_size=train_ratio,
         stratify=labels,
+        random_state=seed
     )
-    # Compute relative validation size within the temp set
-    val_rel = val_ratio / (1.0 - train_ratio)
+
     # Validation vs Test
     val_idx, test_idx, _, _ = train_test_split(
         temp_idx, y_temp,
-        train_size=val_rel,
+        train_size=val_ratio,
         stratify=y_temp,
+        random_state=seed 
     )
 
     # Wrap subsets and assign transforms

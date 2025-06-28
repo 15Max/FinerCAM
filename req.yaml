@@ -2,6 +2,7 @@ name: xai
 channels:
   - defaults
   - conda-forge
+  - nvidia
   - pytorch
 dependencies:
   - python=3.10
@@ -9,12 +10,12 @@ dependencies:
   - pandas
   - matplotlib
   - scipy
+  - scikit-learn
   - tqdm
   - ipykernel
   - pip
   - pytorch
+  - pytorch-cuda=12.1   
   - torchvision
   - torchaudio
-  - cudatoolkit
   - transformers
-  - scikit-learn
