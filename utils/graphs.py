@@ -52,14 +52,13 @@ def plot_metrics(runs,
 
 
 if __name__ == "__main__":
-
+    
     from pathlib import Path
 
     project_dir = Path(__file__).resolve().parent.parent
     results_dir = project_dir / 'results'
-    results_dir = str(results_dir) + os.sep  # ensure trailing slash for paths
+    results_dir = str(results_dir) + os.sep 
 
-    # Example usage
     runs = {
         'training': results_dir + 'metrics_train.csv',
         'validation': results_dir + 'metrics_val.csv'

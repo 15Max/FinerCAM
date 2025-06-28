@@ -4,7 +4,7 @@ import torch.nn as nn
 from torchvision import models
 from torchvision.models import resnet50, ResNet50_Weights
 from torch import amp
-from sklearn.metrics import precision_recall_fscore_support, accuracy_score
+from sklearn.metrics import precision_recall_fscore_support, accuracy_score, classification_report, confusion_matrix
 import pandas as pd
 from tqdm import tqdm
 import os  
@@ -179,3 +179,79 @@ def train_model(model: nn.Module,
         print(f"Metrics saved to {results_dir}")
 
     return model
+
+
+def evaluate_model(weights_dir: str,
+                  test_loader: torch.utils.data.DataLoader,
+                  device: torch.device,
+                  class_names: list,
+                  results_dir: str):
+    """
+    Evaluate a model on the test set and save summary metrics + confusion matrix to CSV.
+
+    Args:
+        model (torch.nn.Module): Trained model (in eval mode or not).
+        test_loader (DataLoader): DataLoader for the test split.
+        device (torch.device): Device for computation.
+        class_names (list): List of class labels.
+        results_dir (str): Path to a directory to save results.
+
+    Writes:
+        1) A summary CSV with one row: accuracy, precision, recall, f1.
+        2) A confusion-matrix CSV alongside, named `<base>_confusion_matrix.csv`.
+    """
+    # Ensure output dir exists
+    os.makedirs(os.path.dirname(results_dir), exist_ok=True)
+
+    model = load_model(
+        num_classes=len(class_names),
+        weights=None,  
+        feature_extract=False
+    )
+
+    checkpoint = torch.load(weights_dir, map_location=device, weights_only=True)
+    model.load_state_dict(checkpoint)
+
+    # Move model to device & eval
+    model.to(device)
+    model.eval()
+
+    all_preds, all_labels = [], []
+
+    with torch.no_grad():
+        for inputs, labels in test_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs = model(inputs)
+            preds = torch.argmax(outputs, dim=1)
+            all_preds.extend(preds.cpu().tolist())
+            all_labels.extend(labels.cpu().tolist())
+
+    # Compute summary metrics
+    acc = accuracy_score(all_labels, all_preds)
+    precision, recall, f1, _ = precision_recall_fscore_support(
+        all_labels, all_preds, average='weighted', zero_division=0
+    )
+
+    # Write summary
+    summary_df = pd.DataFrame([{
+        'accuracy': acc,
+        'precision': precision,
+        'recall': recall,
+        'f1_score': f1
+    }])
+    summary_df.to_csv(results_dir + '/metrics_test.csv', index=False)
+
+    # Compute & write confusion matrix
+    cm = confusion_matrix(all_labels, all_preds)
+    cm_df = pd.DataFrame(cm, index=class_names, columns=class_names)
+    base, _ = os.path.splitext(results_dir)
+    cm_csv = f"{base}/confusion_matrix.csv"
+    cm_df.to_csv(cm_csv)
+
+    return {
+        'accuracy': acc,
+        'precision': precision,
+        'recall': recall,
+        'f1_score': f1,
+        'confusion_matrix': cm
+    }

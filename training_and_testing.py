@@ -2,7 +2,7 @@
 import torch, torch.nn as nn, torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from utils.data  import get_dataloaders
-from models.model import load_model, train_model
+from models.model import load_model, train_model, evaluate_model
 from pathlib import Path
 import argparse
 
@@ -10,12 +10,15 @@ import argparse
 if __name__ == "__main__":
     # Argument parser for command line options
     parser = argparse.ArgumentParser(description='Train a ResNet50 model on image data.')
-    parser.add_argument('--train', default = True, type = bool, help='Flag to indicate training mode')
-    parser.add_argument('--test', default = False, type = bool, help='Flag to indicate testing mode')
+    parser.add_argument('--train', action='store_true', help='Enable training mode')
+    parser.add_argument('--test', action='store_true', help='Enable testing mode')
 
     args = parser.parse_args()
     training = args.train
     testing = args.test
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    print(f"Training mode: {training}, Testing mode: {testing}")
 
     project_dir = Path(__file__).resolve().parent
     model_save_path = project_dir / 'models' / 'checkpoints' / 'best_resnet50.pth'
@@ -73,8 +76,14 @@ if __name__ == "__main__":
         )
 
     if testing:
-        # Load the best model weights
+
         if not model_save_path.exists():
             raise FileNotFoundError(f"Model weights not found at {model_save_path}. Please train the model first.")
-        
-        print("got here!")
+
+        evaluate_model(
+            weights_dir = str(model_save_path),
+            test_loader = test_loader,
+            device = device,
+            class_names = class_names,
+            results_dir = str(project_dir / 'results'),
+        )

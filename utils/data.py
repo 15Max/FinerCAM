@@ -116,12 +116,48 @@ def get_dataloaders(data_dir: str,
                              batch_size=batch_size,
                              shuffle=False,
                              num_workers=num_workers)
+    
+    # Save the data loaders in a dir
+
+    dataloaders_dir = os.path.join(os.path.dirname(data_dir), 'dataloaders')
+
+    torch.save({
+        'train': train_loader,
+        'val': val_loader,
+        'test': test_loader
+    }, os.path.join(dataloaders_dir, 'dataloaders.pth'))
 
     # Return the three loaders and class mapping
     return {'train': train_loader,
             'val': val_loader,
             'test': test_loader}, class_names
 
+
+def get_class_names(data_dir: str):
+    """
+    Get class names from the dataset directory structure.
+
+    Args:
+        data_dir (str): Root directory with subfolders per class.
+
+    Returns:
+        class_names (List[str]): List of class names inferred from folder names.
+    """
+    dataset = datasets.ImageFolder(root=data_dir)
+    return dataset.classes
+
+
+def get_dataloaders(loaders_path: str):
+    """
+    Load pre-saved DataLoaders from a file.
+
+    Args:
+        loaders_path (str): Path to the file containing saved DataLoaders.
+
+    Returns:
+        dataloaders (dict): Dictionary with 'train', 'val', 'test' DataLoader objects.
+    """
+    return torch.load(loaders_path, map_location=torch.device('cpu'))
 
 ###################################################
 ################# TESTING #########################
