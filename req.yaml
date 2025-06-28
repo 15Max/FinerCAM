@@ -1,0 +1,20 @@
+name: xai
+channels:
+  - defaults
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.10
+  - numpy
+  - pandas
+  - matplotlib
+  - scipy
+  - tqdm
+  - ipykernel
+  - pip
+  - pytorch
+  - torchvision
+  - torchaudio
+  - cudatoolkit
+  - transformers
+  - scikit-learn
