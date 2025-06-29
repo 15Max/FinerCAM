@@ -8,6 +8,7 @@
 
 data/*
 models/checkpoints/*
+results/*
 
 # Ignore .csv .pkl and Zone.Identifier files
 *.pkl 

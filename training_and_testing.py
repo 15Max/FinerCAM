@@ -1,7 +1,7 @@
 
 import torch, torch.nn as nn, torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from utils.data  import get_dataloaders
+from utils.data  import get_dataloaders, load_dataloaders, get_class_names
 from models.model import load_model, train_model, evaluate_model
 from pathlib import Path
 import argparse
@@ -12,28 +12,36 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train a ResNet50 model on image data.')
     parser.add_argument('--train', action='store_true', help='Enable training mode')
     parser.add_argument('--test', action='store_true', help='Enable testing mode')
+    parser.add_argument('--data_prep', action='store_true', help='Enable data preprocessing mode')
 
+
+    
+    project_dir = Path(__file__).resolve().parent
+    model_save_path = project_dir / 'models' / 'checkpoints' / 'best_resnet50.pth'
     args = parser.parse_args()
     training = args.train
     testing = args.test
+    data_prep = args.data_prep
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    print(f"Training mode: {training}, Testing mode: {testing}")
 
-    project_dir = Path(__file__).resolve().parent
-    model_save_path = project_dir / 'models' / 'checkpoints' / 'best_resnet50.pth'
+    if data_prep:
+        loaders, class_names = get_dataloaders(
+            data_dir = 'data/images',
+            train_ratio = 0.7,
+            val_ratio= 0.1,
+            batch_size = 32,
+            num_workers = 4,
+            input_size = 224,
+            seed = 15)
 
-
-    loaders, class_names = get_dataloaders(
-        data_dir = 'data/images',
-        train_ratio = 0.7,
-        val_ratio= 0.1,
-        batch_size = 32,
-        num_workers = 4,
-        input_size = 224,
-        seed = 15)
-
-    train_loader, val_loader, test_loader = loaders['train'], loaders['val'], loaders['test']
+        train_loader, val_loader, test_loader = loaders['train'], loaders['val'], loaders['test']
+    
+    else:
+        # Load pre-saved DataLoaders
+        loaders = load_dataloaders(loaders_path=str(project_dir / 'data' / 'dataloaders' / 'dataloaders.pth'))
+        train_loader, val_loader, test_loader = loaders['train'], loaders['val'], loaders['test']
+        class_names = get_class_names(data_dir='data/images')
 
     if training:
         print(f"Training on {len(train_loader)} batches, validating on {len(val_loader)} batches")
@@ -51,7 +59,7 @@ if __name__ == "__main__":
 
         scheduler = ReduceLROnPlateau(
             optimizer,
-            mode='min',         # we want the val loss to go *down*
+            mode='min',         
             factor=0.1,         # new_lr = old_lr * factor
             patience=3,         # wait this many epochs before reducing
             min_lr=1e-6         # lower bound on the LR
@@ -69,7 +77,7 @@ if __name__ == "__main__":
             results_dir = str(project_dir / 'results'),
             model_save_path = str(model_save_path),
             scheduler = scheduler,
-            grad_clip= 1,
+            grad_clip= 1, # do we use it?
             early_stop=True,
             patience=3,
             min_delta=0.005

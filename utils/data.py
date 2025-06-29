@@ -4,7 +4,8 @@ from torch.utils.data import DataLoader, Subset
 from torchvision import transforms, datasets  
 from sklearn.model_selection import train_test_split  
 import numpy as np
-
+import random
+from pathlib import Path
 
 def get_dataloaders(data_dir: str,
                     train_ratio: float = 0.7,
@@ -83,7 +84,9 @@ def get_dataloaders(data_dir: str,
         random_state=seed
     )
 
-    # Validation vs Test
+    
+    val_ratio = val_ratio / (1 - train_ratio)  # Adjusted for temp split
+
     val_idx, test_idx, _, _ = train_test_split(
         temp_idx, y_temp,
         train_size=val_ratio,
@@ -144,10 +147,27 @@ def get_class_names(data_dir: str):
         class_names (List[str]): List of class names inferred from folder names.
     """
     dataset = datasets.ImageFolder(root=data_dir)
-    return dataset.classes
+    class_names = dataset.classes
+    class_names = [name.split('-', 1)[-1] for name in class_names] 
+    return class_names
 
 
-def get_dataloaders(loaders_path: str):
+def get_class_names_raw(data_dir: str):
+    """
+    Get raw class names from the dataset directory structure.
+
+    Args:
+        data_dir (str): Root directory with subfolders per class.
+
+    Returns:
+        class_names (List[str]): List of class names inferred from folder names.
+    """
+    dataset = datasets.ImageFolder(root=data_dir)
+    class_names = dataset.classes
+    return class_names
+
+
+def load_dataloaders(loaders_path: str):
     """
     Load pre-saved DataLoaders from a file.
 
@@ -158,6 +178,69 @@ def get_dataloaders(loaders_path: str):
         dataloaders (dict): Dictionary with 'train', 'val', 'test' DataLoader objects.
     """
     return torch.load(loaders_path, map_location=torch.device('cpu'))
+
+
+def get_num_classes(data_dir: str):
+    """
+    Get the number of classes in the dataset.
+
+    Args:
+        data_dir (str): Root directory with subfolders per class.
+
+    Returns:
+        num_classes (int): Number of unique classes in the dataset.
+    """
+    class_names = get_class_names(data_dir)
+    return len(class_names)
+
+
+
+
+def sample_random_images_by_class(data_dir: str,
+                                  num_samples: int = 20,
+                                  exts: str = ".jpg"):
+    """
+    For num_samples times, pick a random class directory under data_dir,
+    then pick a random image file from that class.
+
+    Returns:
+        List[str]: paths to the sampled images.
+    """
+    dataset = datasets.ImageFolder(root=data_dir)
+    classes = dataset.classes
+    sampled = []
+    for _ in range(num_samples):
+        cls = random.choice(classes)
+        folder = Path(data_dir) / cls
+        imgs = [p for p in folder.iterdir() if p.suffix.lower() == exts.lower()]
+        if not imgs:
+            continue
+        picked = random.choice(imgs)
+        sampled.append(str(picked))
+    return sampled
+
+
+def sample_images_from_class(data_dir: str,
+                            class_name: str,
+                            num_samples: int = 20,
+                            exts: str = ".jpg"):
+    """
+    Sample a specific number of images from a given class directory.
+
+    Args:
+        data_dir (str): Root directory with subfolders per class.
+        class_name (str): Name of the class to sample from.
+        num_samples (int): Number of images to sample.
+        exts (str): File extension to filter images.
+
+    Returns:
+        List[str]: Paths to the sampled images from the specified class.
+    """
+    folder = Path(data_dir) / class_name
+    imgs = [p for p in folder.iterdir() if p.suffix.lower() == exts.lower()]
+    return random.sample(imgs, min(num_samples, len(imgs)))
+
+
 
 ###################################################
 ################# TESTING #########################
@@ -171,20 +254,27 @@ if __name__ == "__main__":
     # Go up one dir
 
     project_dir = Path(__file__).resolve().parent.parent
-    data_dir = project_dir / 'data' / 'images'
-   
-    print(f"Using data directory: {data_dir}")
+    data_dir = project_dir / 'data'
+    dataloaders_path = data_dir / 'dataloaders' / 'dataloaders.pth'
+    image_dir = data_dir / 'images'
+    
+    print(f"Using data directory: {image_dir}")
 
     # Get the dataloaders
-    dataloaders, class_names = get_dataloaders(
-        data_dir=str(data_dir),
-        train_ratio=0.8,
-        val_ratio=0.1,
-        batch_size=32,
-        num_workers=4,
-        input_size=224)
+    dataloaders = load_dataloaders(loaders_path=str(dataloaders_path))
     
-    print(f"Class names: {class_names}")
+    print(f"Class names: {get_class_names(image_dir)}")
     print(f"Train loader: {len(dataloaders['train'])} batches")
     print(f"Validation loader: {len(dataloaders['val'])} batches")
     print(f"Test loader: {len(dataloaders['test'])} batches")
+
+    # Get some random images
+    random_images = sample_random_images_by_class(
+        data_dir=str(image_dir),
+        num_samples=5,
+        exts=".jpg"
+    )
+
+    print("Sampled random images:")
+    for img in random_images:
+        print(f"- {img}")
