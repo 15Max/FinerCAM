@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     interactive_mask_slider_script(model, image_tensor, finercam_eskimo, target_class=97)
 
-     
+    
     # Testing several gamma values for FinerCAM
     gammas = [0.2, 0.4, 0.6, 0.8, 1.0]
     for gamma in gammas:
