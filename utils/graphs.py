@@ -107,6 +107,7 @@ def plot_top_similar_pairs(sim_matrix: torch.Tensor, top_n=10, class_names=None,
     plt.ylabel("Cosine Similarity")
     plt.xlabel("Class Index Pairs")
     plt.title(f"Top {top_n} Most Similar Class Pairs")
+    plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
 
     if show:
@@ -218,13 +219,9 @@ def compute_deletion_curve(model, input_tensor, cam, target_class, reference_cla
     plt.tight_layout()
     if show:
         plt.show()
-    if saving_dir:
+    if saving_dir is not None:
         os.makedirs(saving_dir, exist_ok=True)
         plt.savefig(os.path.join(saving_dir, f"deletion_curve_target_{target_class}.png"))
-        if reference_class is not None:
-            plt.savefig(os.path.join(saving_dir, f"deletion_curve_reference_{reference_class}.png"))
-        print(f"Saved deletion curve plots to {saving_dir}")
-
     return {
         "percent_removed": deletion_percents,
         "target_scores": target_scores,

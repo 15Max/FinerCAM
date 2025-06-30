@@ -37,6 +37,6 @@ classifier_weights = model.fc.weight.data.clone()
 
 sim_matrix = cosine_similarity_matrix(classifier_weights, device)
 
-plot_top_similar_pairs(sim_matrix, top_n=10, show = False, saving_dir=similarity_plot_dir)
+plot_top_similar_pairs(sim_matrix, top_n=20, show = False, saving_dir=similarity_plot_dir)
 df_sim = pd.DataFrame(sim_matrix.cpu().numpy())
 df_sim.to_csv( str(similarity_plot_dir) +"/cosine_similarity_matrix.csv", index=False)
