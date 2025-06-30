@@ -5,6 +5,7 @@ from torchvision import transforms, datasets
 from sklearn.model_selection import train_test_split  
 import numpy as np
 import random
+import pandas as pd
 from pathlib import Path
 
 def get_dataloaders(data_dir: str,
@@ -240,6 +241,30 @@ def sample_images_from_class(data_dir: str,
     imgs = [p for p in folder.iterdir() if p.suffix.lower() == exts.lower()]
     return random.sample(imgs, min(num_samples, len(imgs)))
 
+
+def save_class_names_and_indexes(data_dir: str, save_path: str):
+    """
+    Get class names and their corresponding indices from the dataset directory.
+
+    Args:
+        data_dir (str): Root directory with subfolders per class.
+        save_path (str): Path to save the class names and indices.
+    """
+    dataset = datasets.ImageFolder(root=data_dir)
+    class_names = dataset.classes
+    class_indices = dataset.class_to_idx
+
+    # Save as a dictionary
+    class_info = {
+        'class_names': class_names,
+        'class_indices': class_indices
+    }
+
+    # Save to a csv file, where each row is class_name, class_index
+    df = pd.DataFrame(list(class_info['class_indices'].items()), columns=['class_name', 'class_index'])
+    df.to_csv(save_path, index=False)
+
+    
 
 
 ###################################################

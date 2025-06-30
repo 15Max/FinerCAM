@@ -1,8 +1,11 @@
 # models/model.py
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torchvision import models
 from torchvision.models import resnet50, ResNet50_Weights
+from collections import defaultdict
+import numpy as np
 from torch import amp
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score, classification_report, confusion_matrix
 import pandas as pd
@@ -255,3 +258,72 @@ def evaluate_model(weights_dir: str,
         'f1_score': f1,
         'confusion_matrix': cm
     }
+
+
+def class_uncertainty(model: torch.nn.Module,
+                                   dataloader: torch.utils.data.DataLoader,
+                                   class_names: list[str],
+                                   device: torch.device):
+    """
+    For each true class, compute:
+      - avg softmax confidence in the correct label
+      - avg entropy of the full softmax distribution
+      - number of samples
+      - number of correct top-1 predictions
+      - per-class accuracy
+
+    Returns a DataFrame sorted by ascending avg_confidence (most uncertain first).
+    """
+    model.to(device).eval()
+
+    # accumulators keyed by true class idx
+    confs = defaultdict(list)
+    ents  = defaultdict(list)
+    correct_counts = defaultdict(int)
+    total_counts   = defaultdict(int)
+
+    with torch.no_grad():
+        for inputs, labels in tqdm(dataloader, desc="Gathering stats"):
+            inputs, labels = inputs.to(device), labels.to(device)
+            logits = model(inputs)              # [B, C]
+            probs  = F.softmax(logits, dim=1)   # [B, C]
+            logp   = F.log_softmax(logits, dim=1)
+
+            # per-sample scalar metrics
+            pred_idxs   = logits.argmax(dim=1)
+            conf_true   = probs.gather(1, labels.unsqueeze(1))[:,0]
+            entropies   = -(probs * logp).sum(dim=1)
+
+            for lbl, pred, c, e in zip(labels.cpu(), 
+                                       pred_idxs.cpu(), 
+                                       conf_true.cpu(), 
+                                       entropies.cpu()):
+                lbl_i = int(lbl)
+                total_counts[lbl_i] += 1
+                if int(pred) == lbl_i:
+                    correct_counts[lbl_i] += 1
+
+                confs[lbl_i].append(float(c))
+                ents[lbl_i].append(float(e))
+
+    # build DataFrame
+    records = []
+    for idx, name in enumerate(class_names):
+        n_total = total_counts.get(idx, 0)
+        if n_total == 0:
+            continue
+        n_correct = correct_counts.get(idx, 0)
+        records.append({
+            'class_idx':      idx,
+            'class_name':     name,
+            'n_samples':      n_total,
+            'n_correct':      n_correct,
+            'accuracy':       n_correct / n_total,
+            'avg_confidence': np.mean(confs[idx]),
+            'avg_entropy':    np.mean(ents[idx]),
+        })
+
+    df = pd.DataFrame.from_records(records)
+    # sort by uncertainty (low confidence first)
+    df = df.sort_values('avg_confidence').reset_index(drop=True)
+    return df

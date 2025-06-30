@@ -2,7 +2,7 @@
 import torch, torch.nn as nn, torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from utils.data  import get_dataloaders, load_dataloaders, get_class_names
-from models.model import load_model, train_model, evaluate_model
+from models.model import load_model, train_model, evaluate_model, class_uncertainty
 from pathlib import Path
 import argparse
 
@@ -13,6 +13,7 @@ if __name__ == "__main__":
     parser.add_argument('--train', action='store_true', help='Enable training mode')
     parser.add_argument('--test', action='store_true', help='Enable testing mode')
     parser.add_argument('--data_prep', action='store_true', help='Enable data preprocessing mode')
+    parser.add_argument('--class_unc', action='store_true', help='Enable class uncertainty computation mode')
 
 
     
@@ -22,6 +23,7 @@ if __name__ == "__main__":
     training = args.train
     testing = args.test
     data_prep = args.data_prep
+    class_uncertain = args.class_unc
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -95,3 +97,19 @@ if __name__ == "__main__":
             class_names = class_names,
             results_dir = str(project_dir / 'results'),
         )
+    
+    if class_uncertain:
+
+        model = load_model(num_classes=len(class_names), feature_extract=False)
+        checkpoint = torch.load(model_save_path, map_location=device, weights_only=True)
+        model.load_state_dict(checkpoint)
+
+
+        uncertainty_results_dir = project_dir / 'results' / 'class_uncertainty'
+        uncertainty_results_dir.mkdir(parents=True, exist_ok=True)
+
+        unc_df = class_uncertainty(model, test_loader, class_names, device)
+        unc_df.to_csv(str(uncertainty_results_dir) + "/uncertainty_test.csv", index=False)
+
+
+    

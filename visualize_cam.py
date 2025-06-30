@@ -1,7 +1,7 @@
-from cam.finercam import finercam
-from cam.gradcam import gradcam
+
+from CAM import GradCAM, FinerCAM
 from models.model import load_model
-from utils.data import get_num_classes, sample_random_images_by_class, sample_images_from_class
+from utils.data import get_num_classes, save_class_names_and_indexes 
 from pathlib import Path
 import torch
 
@@ -25,6 +25,8 @@ model = load_model(num_classes=num_classes, feature_extract=False)
 checkpoint = torch.load(weights_path, map_location=device, weights_only=True)
 model.load_state_dict(checkpoint)
 target_layer = model.layer4[-1]
+model.to(device)
+model.eval()
 
 
 
@@ -33,43 +35,68 @@ target_layer = model.layer4[-1]
 
 if __name__ == "__main__":
     
-    alpha_ranges = [0.2, 0.5, 1.0]
-    comparison_categories = [[1], [1,2]]
 
-    from pathlib import Path
-    images_dir = Path(images_dir)
+    # Create the class names and indexes file
+    class_names_file = data_dir / 'class_names_and_indexes.csv'
+    if not class_names_file.exists():
+        save_class_names_and_indexes(data_dir=str(images_dir), save_path=str(class_names_file))
 
-    # For random images
-    # images_paths = sample_random_images_by_class(data_dir = images_dir,
-    #                                             num_samples = 20,
-    #                                             exts = ".jpg")
+
+    single_image = str("data/images/n02109961-Eskimo_dog/n02109961_623.jpg")
+
+
+    
+    gradcam = GradCAM(
+        model=model,
+        target_layer=target_layer)
+    
+    # What are the most similar classes to the target class?
+
+    outputs = model(gradcam.preprocess_image(image_path=single_image, device=device)[0])
+    _, predicted = torch.max(outputs, 1)
+    print(f"Predicted class index: {predicted.item()}")
+
+    # Top 3
+    topk_values, topk_indices = torch.topk(outputs, k=3)
+    print("Top 3 class indices:", topk_indices[0].tolist())
     
 
-    images_path = sample_images_from_class(data_dir=images_dir,
-                                           class_name = 'n02085620-Chihuahua',
-                                           num_samples=20,
-                                           exts=".jpg")
+    image_tensor, image = gradcam.preprocess_image(image_path = single_image, device = device)
 
-    for alpha in alpha_ranges:
-        for comparison in comparison_categories:
-            output_dir_fc_r = output_dir_fc / f'alpha_{alpha}_comparison_{comparison}'
-            output_dir_fc_r.mkdir(parents=True, exist_ok=True)
+    cam = gradcam.generate_CAM(
+        input_image=image_tensor,
+        target_class=97)
+    
+    overlay_image = gradcam.visualize_CAM(cam, image, show = True, alpha = 0.5)
 
-            finercam(
-                model=model,
-                target_layer=target_layer,
-                image_paths= images_path, 
-                output_dir=str(output_dir_fc_r),
-                device=device,
-                input_size=224,
-                alpha= alpha,
-                comparison_categories= comparison)
 
-    gradcam(
+    finercam = FinerCAM(
         model=model,
-        target_layer=target_layer,
-        image_paths=images_path,  
-        output_dir=str(output_dir_gc),
-        device=device,
-        input_size=224
+        target_layer=target_layer)
+    
+    cam = finercam.generate_CAM(
+        input_image=image_tensor,
+        target_class=97,
+        reference_classes=99,
+        gamma=1
     )
+
+    overlay_image = finercam.visualize_CAM(cam, image, show = True, alpha = 0.5)
+
+    cam = finercam.generate_CAM(
+        input_image=image_tensor,
+        target_class=97,
+        reference_classes=98,
+        gamma=1
+    )
+
+    overlay_image = finercam.visualize_CAM(cam, image, show = True, alpha = 0.5)
+
+    cam = finercam.generate_CAM(
+        input_image=image_tensor,
+        target_class=97,
+        reference_classes=[98, 99],
+        gamma=1
+    )
+
+    overlay_image = finercam.visualize_CAM(cam, image, show = True, alpha = 0.5)
