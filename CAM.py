@@ -201,3 +201,4 @@ class FinerCAM(MethodsCAM):
         cam = np.maximum(cam, 0)
         cam = (cam - cam.min()) / (cam.max() - cam.min() + 1e-8)
         return cam
+    

@@ -2,6 +2,7 @@
 from CAM import GradCAM, FinerCAM
 from models.model import load_model
 from utils.data import get_num_classes, save_class_names_and_indexes 
+from utils.graphs import compute_deletion_curve, compute_relative_confidence_drop, interactive_mask_slider_script
 from pathlib import Path
 import torch
 
@@ -83,20 +84,14 @@ if __name__ == "__main__":
 
     overlay_image = finercam.visualize_CAM(cam, image, show = True, alpha = 0.5)
 
-    cam = finercam.generate_CAM(
-        input_image=image_tensor,
+    results = compute_deletion_curve(
+        model=model,
+        input_tensor=image_tensor,
+        cam=cam,
         target_class=97,
-        reference_classes=98,
-        gamma=1
+        reference_class=99,
+        steps=50
     )
 
-    overlay_image = finercam.visualize_CAM(cam, image, show = True, alpha = 0.5)
 
-    cam = finercam.generate_CAM(
-        input_image=image_tensor,
-        target_class=97,
-        reference_classes=[98, 99],
-        gamma=1
-    )
-
-    overlay_image = finercam.visualize_CAM(cam, image, show = True, alpha = 0.5)
+    interactive_mask_slider_script(model, image_tensor, cam, target_class=97)

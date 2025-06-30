@@ -13,7 +13,7 @@ weights_path = project_dir / 'models' / 'checkpoints' / 'best_resnet50.pth'
 data_dir     = project_dir / 'data' 
 images_dir     = data_dir   / 'images'
 loaders_dir  = project_dir / 'data'   / 'dataloaders' / 'dataloaders.pth'
-similarity_plot_dir = project_dir / 'results' / 'similarity_plots'
+similarity_plot_dir = project_dir / 'results' / 'plots' / 'similarity_plots'
 device       = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 image_path = 'data/images/n02088466-bloodhound/n02088466_1262.jpg'
@@ -37,6 +37,6 @@ classifier_weights = model.fc.weight.data.clone()
 
 sim_matrix = cosine_similarity_matrix(classifier_weights, device)
 
-plot_top_similar_pairs(sim_matrix, top_n=10, show = False, save_path=similarity_plot_dir / 'top_10_similar_pairs.png')
+plot_top_similar_pairs(sim_matrix, top_n=10, show = False, saving_dir=similarity_plot_dir)
 df_sim = pd.DataFrame(sim_matrix.cpu().numpy())
 df_sim.to_csv( str(similarity_plot_dir) +"/cosine_similarity_matrix.csv", index=False)
