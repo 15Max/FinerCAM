@@ -5,6 +5,7 @@ from utils.data import get_num_classes, save_class_names_and_indexes
 from utils.graphs import compute_deletion_curve, compute_relative_confidence_drop, interactive_mask_slider_script
 from pathlib import Path
 import torch
+import os
 
 
 
@@ -13,13 +14,11 @@ weights_path = project_dir / 'models' / 'checkpoints' / 'best_resnet50.pth'
 data_dir     = project_dir / 'data' 
 images_dir     = data_dir   / 'images'
 loaders_dir  = project_dir / 'data'   / 'dataloaders' / 'dataloaders.pth'
-output_dir_fc   = project_dir / 'results' / 'finerCAM'
-output_dir_gc   = project_dir / 'results' / 'gradCAM'
+visualizations_dir = project_dir / 'results' / 'visualizations'
 device       = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-image_path = 'data/images/n02088466-bloodhound/n02088466_1262.jpg'
 num_classes = get_num_classes(images_dir)
 
+os.makedirs(visualizations_dir, exist_ok=True)
 
 # Model and target layer
 model = load_model(num_classes=num_classes, feature_extract=False)
@@ -43,17 +42,18 @@ if __name__ == "__main__":
         save_class_names_and_indexes(data_dir=str(images_dir), save_path=str(class_names_file))
 
 
-    single_image = str("data/images/n02109961-Eskimo_dog/n02109961_623.jpg")
+    husky_target = str("data/images/n02110185-Siberian_husky/n02110185_2736.jpg")
+    eskimo_dog_reference = str("data/images/n02109961-Eskimo_dog/n02109961_1017.jpg")
 
 
-    
+
     gradcam = GradCAM(
         model=model,
         target_layer=target_layer)
     
     # What are the most similar classes to the target class?
 
-    outputs = model(gradcam.preprocess_image(image_path=single_image, device=device)[0])
+    outputs = model(gradcam.preprocess_image(image_path=husky_target, device=device)[0])
     _, predicted = torch.max(outputs, 1)
     print(f"Predicted class index: {predicted.item()}")
 
@@ -62,36 +62,55 @@ if __name__ == "__main__":
     print("Top 3 class indices:", topk_indices[0].tolist())
     
 
-    image_tensor, image = gradcam.preprocess_image(image_path = single_image, device = device)
+    image_tensor, image = gradcam.preprocess_image(image_path = husky_target, device = device)
 
-    cam = gradcam.generate_CAM(
+    cam_husky = gradcam.generate_CAM(
+        input_image=image_tensor,
+        target_class=99)
+    
+    
+    husky_dog_with_husky_fm = gradcam.visualize_CAM(cam_husky, image, show = True, alpha = 0.5, saving_path=str(visualizations_dir / 'husky_dog_with_husky_fm.jpg'))
+
+    cam_eskimo = gradcam.generate_CAM(
         input_image=image_tensor,
         target_class=97)
     
-    overlay_image = gradcam.visualize_CAM(cam, image, show = True, alpha = 0.5)
+    husky_dog_with_eskimo_fm = gradcam.visualize_CAM(cam_eskimo, image, show = True, alpha = 0.5, saving_path=str(visualizations_dir / 'husky_dog_with_eskimo_fm.jpg'))
 
 
     finercam = FinerCAM(
         model=model,
         target_layer=target_layer)
     
-    cam = finercam.generate_CAM(
+    finercam_eskimo = finercam.generate_CAM(
         input_image=image_tensor,
-        target_class=97,
-        reference_classes=99,
+        target_class=99,
+        reference_classes=97,
         gamma=1
     )
 
-    overlay_image = finercam.visualize_CAM(cam, image, show = True, alpha = 0.5)
+    husky_dog_finercam_ref_eskimo = finercam.visualize_CAM(finercam_eskimo, image, show = True, alpha = 0.5, saving_path=str(visualizations_dir / 'husky_dog_finercam_ref_eskimo.jpg'))
 
     results = compute_deletion_curve(
         model=model,
         input_tensor=image_tensor,
-        cam=cam,
-        target_class=97,
-        reference_class=99,
-        steps=50
+        cam=finercam_eskimo,
+        target_class=99,
+        reference_class=97,
+        steps=100,
     )
 
 
-    interactive_mask_slider_script(model, image_tensor, cam, target_class=97)
+    interactive_mask_slider_script(model, image_tensor, finercam_eskimo, target_class=97)
+
+     
+    # Testing several gamma values for FinerCAM
+    gammas = [0.2, 0.4, 0.6, 0.8, 1.0]
+    for gamma in gammas:
+        finercam_eskimo = finercam.generate_CAM(
+            input_image=image_tensor,
+            target_class=99,
+            reference_classes=97,
+            gamma=gamma
+        )
+        finercam.visualize_CAM(finercam_eskimo, image, show=True, alpha=0.5, saving_path=str(visualizations_dir / f'husky_dog_finercam_ref_eskimo_gamma_{gamma}.jpg'))

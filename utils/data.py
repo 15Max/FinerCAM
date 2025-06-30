@@ -196,52 +196,6 @@ def get_num_classes(data_dir: str):
 
 
 
-
-def sample_random_images_by_class(data_dir: str,
-                                  num_samples: int = 20,
-                                  exts: str = ".jpg"):
-    """
-    For num_samples times, pick a random class directory under data_dir,
-    then pick a random image file from that class.
-
-    Returns:
-        List[str]: paths to the sampled images.
-    """
-    dataset = datasets.ImageFolder(root=data_dir)
-    classes = dataset.classes
-    sampled = []
-    for _ in range(num_samples):
-        cls = random.choice(classes)
-        folder = Path(data_dir) / cls
-        imgs = [p for p in folder.iterdir() if p.suffix.lower() == exts.lower()]
-        if not imgs:
-            continue
-        picked = random.choice(imgs)
-        sampled.append(str(picked))
-    return sampled
-
-
-def sample_images_from_class(data_dir: str,
-                            class_name: str,
-                            num_samples: int = 20,
-                            exts: str = ".jpg"):
-    """
-    Sample a specific number of images from a given class directory.
-
-    Args:
-        data_dir (str): Root directory with subfolders per class.
-        class_name (str): Name of the class to sample from.
-        num_samples (int): Number of images to sample.
-        exts (str): File extension to filter images.
-
-    Returns:
-        List[str]: Paths to the sampled images from the specified class.
-    """
-    folder = Path(data_dir) / class_name
-    imgs = [p for p in folder.iterdir() if p.suffix.lower() == exts.lower()]
-    return random.sample(imgs, min(num_samples, len(imgs)))
-
-
 def save_class_names_and_indexes(data_dir: str, save_path: str):
     """
     Get class names and their corresponding indices from the dataset directory.

@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models
-from torchvision.models import resnet50, ResNet50_Weights
+from torchvision.models import resnet50, ResNet50_Weights # resnet50 and resnet50_weightsv2
 from collections import defaultdict
 import numpy as np
 from torch import amp

@@ -87,13 +87,18 @@ class MethodsCAM:
 
         overlay = np.array(original_image) * (1 - alpha) + cam_colored * alpha
         overlay = overlay.astype(np.uint8)
+        
+        plt.imshow(overlay)
+        plt.axis('off')
+        # If cam is GradCAM
+        if hasattr(cam, 'gamma'):
+            plt.title("CAM Overlay with Gamma = {} and Alpha = {}".format(cam.gamma, alpha))
+        else:
+            plt.title("CAM Overlay with Alpha = {}".format(alpha))
 
         if show:
-            plt.imshow(overlay)
-            plt.axis('off')
-            plt.title("CAM Overlay with Alpha = {}".format(alpha))
             plt.show()
-        
+
         if saving_path is not None:
             overlay_image = Image.fromarray(overlay)
             overlay_image.save(saving_path)
@@ -156,6 +161,7 @@ class FinerCAM(MethodsCAM):
         super().__init__(model, target_layer)
         self.gradients = None
         self.activations = None
+        self.gamma = None
     
 
     def generate_CAM(self, input_image, target_class=None, reference_classes=None, gamma=0.6):
@@ -173,6 +179,7 @@ class FinerCAM(MethodsCAM):
             np.ndarray: The generated Class Activation Map as a 2D NumPy array in [0, 1].
         """
         model_output = self.model(input_image)
+        self.gamma = gamma 
 
         if target_class is None:
             target_class = model_output.argmax(dim=1).item()
@@ -202,3 +209,36 @@ class FinerCAM(MethodsCAM):
         cam = (cam - cam.min()) / (cam.max() - cam.min() + 1e-8)
         return cam
     
+    def visualize_CAM(self, cam, original_image, alpha=0.5, show=False, saving_path=None):
+        """
+        Visualize the FinerCAM overlay on the original image with method-specific title.
+        
+        Args:
+            cam (np.ndarray): The Class Activation Map to be visualized.
+            original_image (PIL.Image): The original image on which the CAM will be overlaid.
+            alpha (float): Transparency of the CAM overlay.
+            show (bool): Whether to show the image using matplotlib.
+            saving_path (str): Path to save the overlay image.
+        
+        Returns:
+            PIL.Image: The overlaid image.
+        """
+        cam_resized = Image.fromarray(np.uint8(cam * 255)).resize(original_image.size, Image.BILINEAR)
+        cam_colored = np.array(cam_resized)
+        cam_colored = plt.cm.jet(cam_colored.astype(np.uint8))[:, :, :3]
+        cam_colored = (cam_colored * 255).astype(np.uint8)
+
+        overlay = np.array(original_image) * (1 - alpha) + cam_colored * alpha
+        overlay = overlay.astype(np.uint8)
+
+        if show:
+            plt.imshow(overlay)
+            plt.axis('off')
+            plt.title(f"FinerCAM Overlay (γ = {self.gamma}, α = {alpha})")
+            plt.show()
+
+        if saving_path is not None:
+            overlay_image = Image.fromarray(overlay)
+            overlay_image.save(saving_path)
+
+        return Image.fromarray(overlay)

@@ -164,7 +164,7 @@ def compute_relative_confidence_drop(model, input_tensor, cam, target_class, sim
     return RD
 
 
-def compute_deletion_curve(model, input_tensor, cam, target_class, reference_class=None, steps=20):
+def compute_deletion_curve(model, input_tensor, cam, target_class, reference_class=None, steps=20, show = True, saving_dir=None):
     """
     Compute and plot a deletion curve for a saliency map.
     
@@ -216,7 +216,14 @@ def compute_deletion_curve(model, input_tensor, cam, target_class, reference_cla
     plt.title("Deletion Curve")
     plt.legend()
     plt.tight_layout()
-    plt.show()
+    if show:
+        plt.show()
+    if saving_dir:
+        os.makedirs(saving_dir, exist_ok=True)
+        plt.savefig(os.path.join(saving_dir, f"deletion_curve_target_{target_class}.png"))
+        if reference_class is not None:
+            plt.savefig(os.path.join(saving_dir, f"deletion_curve_reference_{reference_class}.png"))
+        print(f"Saved deletion curve plots to {saving_dir}")
 
     return {
         "percent_removed": deletion_percents,
