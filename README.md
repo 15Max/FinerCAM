@@ -14,7 +14,7 @@ For a quick overview feel free to check the project **presentation** :point_down
 
 ## Motivation
 
-Class Activation Mapping methods such as Grad-CAM are effective at identifying image regions that support a prediction. A problem arises when different classes share many visualm characteristics: in such cases the classical approach can fail.
+Class Activation Mapping methods such as Grad-CAM are effective at identifying image regions that support a prediction. A problem arises when different classes share many visual characteristics: in such cases the classical approach can fail.
 
 This becomes especially relevant in **fine-grained image classification**. A Siberian Husky and an Eskimo Dog, for example, may activate many of the same visual features even though the classifier has learned subtle cues that distinguish them.
 
