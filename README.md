@@ -28,8 +28,8 @@ $$
 
 where $\gamma$ controls the strength of the comparison. Gradients of this contrastive objective are then used to construct the activation map.
 
-- $\bm{\gamma = 0}$ approaches the ordinary target-class explanation.
-- Increasing $\bm{\gamma}$ suppresses features that also support the reference class and emphasizes more discriminative features.
+- $\gamma = 0$ approaches the ordinary target-class explanation.
+- Increasing $\gamma$ suppresses features that also support the reference class and emphasizes more discriminative features.
 - Multiple reference classes are supported by averaging their logits in the comparison term.
 
 ## Pipeline
@@ -168,7 +168,7 @@ Finer-CAM instead backpropagates through the contrastive class score $y\_{\text{
 
 > **Which regions support the target class specifically relative to this reference class?**
 
-The implementation also exposes $\bm{\gamma}$, allowing the comparison strength to be varied without retraining the model.
+The implementation also exposes $\gamma$, allowing the comparison strength to be varied without retraining the model.
 
 ## Qualitative examples
 
@@ -212,9 +212,9 @@ A third case study compares **Irish Wolfhound** with **Scottish Deerhound**, ano
 
 The repository contains Finer-CAM visualizations generated with several values of $\gamma$, including:
 
-```text
-γ ∈ {0.2, 0.4, 0.6, 0.8, 1.0}
-```
+$$
+\gamma \in \(0.2, 0.4, 0.6, 0.8, 1.0\)
+$$
 
 for the main class-pair experiments.
 
@@ -230,7 +230,6 @@ results/visualizations/*_gamma_0.8.jpg
 results/visualizations/*_gamma_1.0.jpg
 ```
 
----
 
 ## Explanation evaluation
 
@@ -251,10 +250,11 @@ The implementation can simultaneously track the target and reference classes, wh
 The project also implements the **Relative Confidence Drop** used in the Finer-CAM work. After masking the most activated CAM regions, it measures how much more the target-class confidence decreases than the reference-class confidence:
 
 $$
-RD = (p_c - p_c^*) - (p_d - p_d^*)
+RD = \(p_c - p_c^\ast\) - \(p_d - p_d^\ast\)
 $$
 
-where $p_c$ and $p_d$ are the original target and reference probabilities, and $p_c^*$ and $p_d^*$ are the corresponding probabilities after masking.
+
+where $p_c$ and $p_d$ are the original target and reference probabilities, and $p_c^\ast$ and $p_d^\ast$ are the corresponding probabilities after masking.
 
 ## Class-level uncertainty analysis
 
